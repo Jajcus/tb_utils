@@ -1,0 +1,75 @@
+#!/usr/bin/python
+
+"""Reorganizes TrekBuddy atlases made with MOBAC so they work better with 
+the new TrekBuddy 'easy zoom' function.
+
+Layers in MOBAC should be named source-mapname, e.g. 'osm-city1', 'osm-city2',
+'ocm-area1', 'ocm-area2' and include the desired zoom levels. Then an untarred
+TrekBuddy atlas should be created.
+
+This script started with the atlas direcory as the only argument will 
+reorganize the layer/map layout so TrekBuddy layers are named 'source-zoom'
+and each contains every map for given source/zoom. Then the atlas may be
+tarred the usuall way or just uploaded to the target device."""
+
+import sys
+import os
+import re
+from shutil import rmtree
+
+MOBAC_LAYER_RE = re.compile(r"^([^-]*)-.*$")
+EZ_LAYER_RE = re.compile(r"^([^-]*)-(\d+)$")
+MOBAC_MAP_RE = re.compile(r"^([^-]*-.*) (\d+)$")
+
+if len(sys.argv) != 2 or not os.path.isdir(sys.argv[1]):
+    print >> sys.stderr, "Usage:"
+    print >> sys.stderr, "    {0} atlas_dir".format(sys.argv[0])
+    sys.exit(1)
+
+atlas_dir = sys.argv[1]
+
+for layer_name in os.listdir(atlas_dir):
+    layer_dir = os.path.join(atlas_dir, layer_name)
+    if not os.path.isdir(layer_dir):
+        continue
+    match = EZ_LAYER_RE.match(layer_name)
+    if match:
+        print "{0}: already EZ".format(layer_name)
+        # already good
+        continue
+    match = MOBAC_LAYER_RE.match(layer_name)
+    if not match:
+        print "{0}: not in MOBAC *-* format".format(layer_name)
+        continue
+    base_name = match.group(1)
+    zooms = []
+    for map_name in os.listdir(layer_dir):
+        match = MOBAC_MAP_RE.match(map_name)
+        if not match:
+            print "{0}: no zoom number".format(map_name)
+            zooms = []
+            break
+        if match.group(1) != layer_name:
+            print "{0}: doesn't match layer {1}".format(map_name, layer_name)
+            zooms = []
+            break
+        zooms.append(match.group(2))
+    if not zooms:
+        print "{0}: layer has no usable maps".format(layer_name)
+        continue 
+    for zoom in zooms:
+        src_path = os.path.join(layer_dir, "{0} {1}".format(layer_name, zoom))
+        dst_dir = os.path.join(atlas_dir, "{0}-{1}".format(base_name, zoom))
+        dst_path = os.path.join(dst_dir, "{0} {1}".format(layer_name, zoom))
+        print "{0} -> {1}".format(src_path, dst_path)
+        if os.path.exists(dst_path):
+            ans = raw_input("{0!r} already exists, replace? ")
+            if ans.lower() not in ("y", "yes"):
+                continue
+            rmtree(dst_path)
+        if not os.path.exists(dst_dir):
+            os.makedirs(dst_dir)
+        os.rename(src_path, dst_path)
+    if not os.listdir(layer_dir):
+        os.rmdir(layer_dir)
+

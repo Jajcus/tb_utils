@@ -1,0 +1,24 @@
+#!/bin/sh -x
+
+if [ -d "$1" ] ; then
+	mapdir="$1"
+	name="`basename "$1"`"
+elif [ -f "$1" ] ; then
+	mapdir=`dirname "$1"`
+	name=`basename "$1"`
+	name="${name%.*}"
+else
+	echo "$1 not found"
+	exit 1
+fi
+
+if [ -f "${mapdir}/${name}.map" ] ; then
+	mapfile="${name}.map"
+	setfile="${name}.set"
+else
+	mapfile="mapka.map"
+	setfile="mapka.set"
+fi
+
+tar cf "${mapdir}/${name}.tar" -C "${mapdir}" "$mapfile" "$setfile" set
+

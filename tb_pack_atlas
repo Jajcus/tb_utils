@@ -1,0 +1,17 @@
+#!/bin/sh
+
+if [ ! -d "$1" ] ; then
+	echo "$1 not found or not a directory"
+	exit 1
+fi
+
+name="$1"
+
+set -e
+cd "${name}"
+echo "Atlas 1.0" > "${name}.tba"
+tar cf "${name}.tar" "${name}.tba"
+tar rf "${name}.tar" --exclude "*.png" --exclude "*.jpg" --exclude "*.tba" --exclude "*.tar" *
+for d in */* ; do
+	tb_pack_map "${d}"
+done

@@ -1,0 +1,90 @@
+#!/usr/bin/python
+
+import sys
+import os
+
+def usage():
+    print >> sys.stderr, "Usage:"
+    print >> sys.stderr, "   %s map_dir new_name" % (sys.argv[0], )
+    print >> sys.stderr, " or:"
+    print >> sys.stderr, "   %s map_file.map new_name" % (sys.argv[0], )
+    sys.exit(1)
+
+def check_files(old_name):
+    map_file = old_name + ".map"
+    set_file = old_name + ".set"
+    if not os.path.exists(map_file):
+        print >> sys.stderr, "%r does not exists." % (map_file, )
+        sys.exit(1)
+    if not os.path.isfile(map_file):
+        print >> sys.stderr, "%r is not a file." % (map_file, )
+        sys.exit(1)
+    if not os.path.exists(set_file):
+        print >> sys.stderr, "%r does not exists." % (set_file, )
+        sys.exit(1)
+    if not os.path.isfile(set_file):
+        print >> sys.stderr, "%r is not a file." % (set_file, )
+        sys.exit(1)
+    if not os.path.isdir("set"):
+        print >> sys.stderr, "'set' directory not found."
+        sys.exit(1)
+
+def rename_map_file(old_name, new_name):
+    print >> sys.stderr, "Renaming map file..."
+    old_map = old_name + ".map"
+    new_map = new_name + ".map"
+    input = file(old_map, "r")
+    output = file(new_map, "w")
+    output.write(input.readline())
+    output.write(input.readline().replace(old_name, new_name, 1))
+    output.write(input.readline().replace(old_name, new_name, 1))
+    output.write(input.read())
+    output.close()
+    input.close()
+    os.remove(old_map)
+
+def rename_slices(old_name, new_name):
+    print >>sys.stderr, "Renaming slice files..."
+    os.chdir("set")
+    for slice_name in os.listdir("."):
+        new_slice_name = slice_name.replace(old_name, new_name, 1)
+        if new_slice_name != slice_name:
+            os.rename(slice_name, new_slice_name)
+    os.chdir("..")
+
+def make_set_file(name):
+    print >>sys.stderr, "Writting new set file..."
+    output = file(name + ".set", "w")
+    for slice_name in os.listdir("set"):
+        print >>output, slice_name
+    output.close()
+
+def rename_files(old_name, new_name):
+    rename_map_file(old_name, new_name)
+    rename_slices(old_name, new_name)
+    make_set_file(new_name)
+    print >>sys.stderr, "Removing old set file..."
+    os.remove(old_name + ".set")
+    print "Done."
+
+def main():
+    if len(sys.argv) != 3:
+        usage()
+    arg1 = sys.argv[1]
+    new_name = sys.argv[2]
+    if arg1.endswith(".map"):
+        old_name = arg1[:-4]
+        check_files(old_name)
+        rename_files(old_name, new_name)
+    elif not os.path.isdir(arg1):
+        print >> sys.stderr, "%r is not a directory." % (arg1, )
+        sys.exit(1)
+    else:
+        old_name = arg1
+        os.chdir(old_name)
+        check_files(old_name)
+        rename_files(old_name, new_name)
+        os.chdir("..")
+        os.rename(old_name, new_name)
+
+main()
